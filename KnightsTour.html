@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기사의 여행 (Knight's Tour)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            touch-action: manipulation; /* 모바일에서 더블 탭 확대 방지 */
+        }
+        .board-grid {
+            display: grid;
+            border: 2px solid #4a5568; /* gray-700 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .cell {
+            width: 100%;
+            padding-bottom: 100%; /* 정사각형 비율 유지 */
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .cell-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .knight {
+            font-size: 2.5rem; /* 기본 폰트 크기 */
+            color: #fefcbf; /* yellow-100 */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            transition: transform 0.2s;
+        }
+        .visited .step-number {
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .possible-move .cell-content::after {
+            content: '';
+            width: 25%;
+            height: 25%;
+            background-color: rgba(74, 222, 128, 0.7); /* green-400 */
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        }
+        
+        /* 반응형 폰트 크기 */
+        @media (max-width: 640px) {
+            .knight { font-size: 1.8rem; }
+            .visited .step-number { font-size: 0.8rem; }
+        }
+        @media (min-width: 641px) and (max-width: 1024px) {
+            .knight { font-size: 2.2rem; }
+            .visited .step-number { font-size: 1rem; }
+        }
+        @media (min-width: 1025px) {
+             .knight { font-size: 2.5rem; }
+             .visited .step-number { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto text-center">
+        <h1 class="text-4xl md:text-5xl font-bold mb-2 text-yellow-400">기사의 여행</h1>
+        <p class="text-lg text-gray-300 mb-6">나이트를 움직여 모든 칸을 한 번씩 방문하세요!</p>
+
+        <!-- 게임 컨트롤 -->
+        <div class="flex flex-wrap justify-center items-center gap-4 mb-6 bg-gray-800 p-4 rounded-lg shadow-lg">
+            <div>
+                <label for="board-size" class="mr-2 font-semibold text-gray-200">판 크기:</label>
+                <select id="board-size" class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                    <option value="5">5x5</option>
+                    <option value="6">6x6</option>
+                    <option value="7">7x7</option>
+                    <option value="8" selected>8x8</option>
+                    <option value="9">9x9</option>
+                </select>
+            </div>
+            <button id="reset-button" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-6 rounded-md transition duration-300 shadow-md">
+                새 게임
+            </button>
+        </div>
+        
+        <div id="status-message" class="h-8 mb-4 text-xl font-bold text-blue-400"></div>
+
+        <!-- 체스판 -->
+        <div id="chessboard" class="board-grid w-full max-w-lg mx-auto aspect-square rounded-md overflow-hidden">
+            <!-- JavaScript로 칸 생성 -->
+        </div>
+        
+        <!-- 게임 정보 (체스판 아래로 이동) -->
+        <div class="flex justify-around items-center mt-6 text-xl bg-gray-800 p-4 rounded-lg shadow-lg">
+            <div class="text-center">
+                <span class="block text-gray-400 text-sm">이동 횟수</span>
+                <span id="move-count" class="font-bold text-2xl">0</span>
+            </div>
+            <div class="text-center">
+                <span class="block text-gray-400 text-sm">남은 칸</span>
+                <span id="remaining-count" class="font-bold text-2xl">64</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chessboard = document.getElementById('chessboard');
+        const boardSizeSelect = document.getElementById('board-size');
+        const resetButton = document.getElementById('reset-button');
+        const moveCountDisplay = document.getElementById('move-count');
+        const remainingCountDisplay = document.getElementById('remaining-count');
+        const statusMessage = document.getElementById('status-message');
+
+        let boardSize = 8;
+        let boardState = [];
+        let knightPos = { x: -1, y: -1 };
+        let moveCount = 0;
+        let gameActive = true;
+        let isGameStarted = false;
+
+        // 게임 초기화 함수
+        function initGame() {
+            boardSize = parseInt(boardSizeSelect.value);
+            boardState = Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
+            moveCount = 0;
+            gameActive = true;
+            isGameStarted = false;
+
+            updateInfo();
+            statusMessage.textContent = '시작할 칸을 선택하세요.';
+            statusMessage.className = 'h-8 mb-4 text-xl font-bold text-blue-400';
+
+            renderBoard();
+        }
+
+        // 보드 렌더링 함수
+        function renderBoard() {
+            chessboard.innerHTML = '';
+            chessboard.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
+
+            for (let y = 0; y < boardSize; y++) {
+                for (let x = 0; x < boardSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    
+                    const isLight = (x + y) % 2 === 0;
+                    cell.style.backgroundColor = isLight ? '#4a5568' : '#2d3748'; // gray-700, gray-800
+
+                    const cellContent = document.createElement('div');
+                    cellContent.classList.add('cell-content');
+
+                    if (boardState[y][x] > 0) {
+                        cell.classList.add('visited');
+                        // 지나간 자리는 한가지 색으로 통일
+                        cell.style.backgroundColor = '#4338ca'; // indigo-700
+                        const stepNumber = document.createElement('span');
+                        stepNumber.className = 'step-number';
+                        stepNumber.textContent = boardState[y][x];
+                        cellContent.appendChild(stepNumber);
+                    }
+                    
+                    if (isGameStarted && knightPos.x === x && knightPos.y === y) {
+                        const knight = document.createElement('span');
+                        knight.className = 'knight';
+                        knight.textContent = '♞';
+                        if(cellContent.firstChild) cellContent.removeChild(cellContent.firstChild);
+                        cellContent.appendChild(knight);
+                    }
+
+                    cell.appendChild(cellContent);
+                    cell.addEventListener('click', () => handleCellClick(x, y));
+                    chessboard.appendChild(cell);
+                }
+            }
+            if (gameActive && isGameStarted) {
+                highlightPossibleMoves();
+            }
+        }
+
+        // 이동 가능 위치 하이라이트
+        function highlightPossibleMoves() {
+            const validMoves = getValidMoves(knightPos.x, knightPos.y);
+            validMoves.forEach(move => {
+                const index = move.y * boardSize + move.x;
+                const cell = chessboard.children[index];
+                if (cell) {
+                    cell.classList.add('possible-move');
+                }
+            });
+        }
+
+        // 셀 클릭 핸들러
+        function handleCellClick(x, y) {
+            if (!gameActive) return;
+
+            if (!isGameStarted) {
+                // 첫 클릭: 시작 위치 설정
+                isGameStarted = true;
+                moveCount = 1;
+                knightPos = { x, y };
+                boardState[y][x] = moveCount;
+
+                statusMessage.textContent = '행운을 빌어요!';
+                statusMessage.className = 'h-8 mb-4 text-xl font-bold text-green-400';
+                
+                updateInfo();
+                renderBoard();
+                checkGameState();
+            } else {
+                // 게임 중: 나이트 이동
+                const validMoves = getValidMoves(knightPos.x, knightPos.y);
+                const isMoveValid = validMoves.some(move => move.x === x && move.y === y);
+
+                if (isMoveValid) {
+                    moveCount++;
+                    knightPos = { x, y };
+                    boardState[y][x] = moveCount;
+                    
+                    updateInfo();
+                    renderBoard();
+                    checkGameState();
+                }
+            }
+        }
+
+        // 유효한 이동 경로 계산
+        function getValidMoves(x, y) {
+            const moves = [
+                { x: x + 1, y: y + 2 }, { x: x + 1, y: y - 2 },
+                { x: x - 1, y: y + 2 }, { x: x - 1, y: y - 2 },
+                { x: x + 2, y: y + 1 }, { x: x + 2, y: y - 1 },
+                { x: x - 2, y: y + 1 }, { x: x - 2, y: y - 1 }
+            ];
+
+            return moves.filter(move =>
+                move.x >= 0 && move.x < boardSize &&
+                move.y >= 0 && move.y < boardSize &&
+                boardState[move.y][move.x] === 0
+            );
+        }
+        
+        // 게임 정보 업데이트
+        function updateInfo() {
+            moveCountDisplay.textContent = moveCount;
+            remainingCountDisplay.textContent = (boardSize * boardSize) - moveCount;
+        }
+
+        // 게임 상태 확인 (승리/패배)
+        function checkGameState() {
+            const totalSquares = boardSize * boardSize;
+            if (moveCount === totalSquares) {
+                statusMessage.textContent = '성공! 모든 칸을 방문했습니다!';
+                statusMessage.className = 'h-8 mb-4 text-xl font-bold text-yellow-400';
+                gameActive = false;
+                renderBoard();
+                return;
+            }
+
+            if(isGameStarted) {
+                const validMoves = getValidMoves(knightPos.x, knightPos.y);
+                if (validMoves.length === 0) {
+                    statusMessage.textContent = '게임 오버! 더 이상 움직일 수 없습니다.';
+                    statusMessage.className = 'h-8 mb-4 text-xl font-bold text-red-500';
+                    gameActive = false;
+                }
+            }
+        }
+
+        // 이벤트 리스너 연결
+        resetButton.addEventListener('click', initGame);
+        boardSizeSelect.addEventListener('change', initGame);
+
+        // 페이지 로드 시 게임 시작
+        initGame();
+    </script>
+</body>
+</html>
