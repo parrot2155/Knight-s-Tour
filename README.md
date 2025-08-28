@@ -1,3 +1,8 @@
+지금 바로 플레이!
+https://rawcdn.githack.com/parrot2155/Knight-s-Tour/refs/heads/main/KnightsTour.html
+
+
+
 '기사의 여행(Knight's Tour)'은 체스판 위에서 나이트(기사) 말을 움직여 모든 칸을 단 한 번씩만 방문하는 퍼즐입니다.
 
 
