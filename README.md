@@ -19,7 +19,9 @@ https://rawcdn.githack.com/parrot2155/Knight-s-Tour/refs/heads/main/KnightsTour.
 
   2.세로로 두 칸 이동 후, 가로로 한 칸 이동 
 
-이러한 움직임 때문에 나이트는 현재 위치에서 최대 8개의 다른 칸으로 이동할 수 있습니다.
+  <img width="200" height="201" alt="image" src="https://github.com/user-attachments/assets/3f9589c6-be86-4b3f-97cc-d8814989cd29" />
+
+나이트는 현재 위치에서 최대 8개의 다른 칸으로 이동할 수 있습니다.
 
 
 '기사의 여행'의 목표는 이와 같은 나이트의 이동 규칙을 따라서 체스판의 모든 칸을 정확히 한 번씩만 방문하는 경로를 찾는 것입니다.
